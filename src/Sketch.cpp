@@ -9,15 +9,29 @@
 
 namespace fs = std::filesystem;
 
+bool replace(std::string& str, const std::string& from, const std::string& to) {
+    size_t start_pos = str.find(from);
+    if(start_pos == std::string::npos)
+        return false;
+    str.replace(start_pos, from.length(), to);
+    return true;
+}
+
 Sketch::Sketch()
 {
     cmdMgr.AddCommand("delay", new DelayCmd);
     cmdMgr.AddCommand("pinmode", new PinModeCmd);
     cmdMgr.AddCommand("setpin", new SetPinCmd);
+    cmdMgr.AddCommand("function", new FunctionCmd);
 }
 
 Sketch::~Sketch()
 {
+    for (const auto& v : streams)
+    {
+        if (v.second->is_open()) v.second->close();
+        delete v.second;
+    }
 }
 
 int Sketch::DoDir(const std::string folderPath)
@@ -30,82 +44,93 @@ int Sketch::DoDir(const std::string folderPath)
 	sketchName = fs::path(sketchFolder).filename().string();
 #endif
 
-    fs::path setupPath = folderPath + "/setup.ino";
-    fs::path loopPath = folderPath + "/loop.ino";
+    fs::path setupPath = folderPath + "/setup.cino";
+    fs::path loopPath = folderPath + "/loop.cino";
 
     if (!fs::exists(setupPath))
     {
-        spdlog::error("Sketch: Couldn't access setup.ino: '" + setupPath.string() + "'");
+        spdlog::error("Sketch: Couldn't access setup.cino: '" + setupPath.string() + "'");
         return 1;
     }
 
     if (!fs::exists(loopPath))
     {
-        spdlog::error("Sketch: Couldn't access loop.ino: '" + loopPath.string() + "'");
+        spdlog::error("Sketch: Couldn't access loop.cino: '" + loopPath.string() + "'");
         return 1;
     }
 
-    std::ifstream setupIn(setupPath);
-    if (!setupIn.is_open())
+    std::vector<fs::path> functionPaths;
+    for (const auto& v : fs::directory_iterator(sketchFolder))
     {
-        spdlog::error("Sketch: Couldn't open setup.ino: '" + setupPath.string() + "'");
-        return 1;
+        std::string fileName; 
+#ifdef __linux__
+        fileName = v.path().filename();
+#endif
+#ifdef _WIN32
+        fileName = v.path().filename().string();
+#endif
+        //if (fileName.find("setup.cino") != std::string::npos || fileName.find("loop.cino") != std::string::npos) continue;
+
+        if (EndsWith(fileName, ".cino"))
+        {
+            functionPaths.push_back(v.path().string());
+        }
     }
 
-    std::ifstream loopIn(loopPath);
-    if (!setupIn.is_open())
+    for (const fs::path& path : functionPaths)
     {
-        setupIn.close();
-        spdlog::error("Sketch: Couldn't open loop.ino: '" + loopPath.string() + "'");
-        return 1;
+        std::ifstream* in = new std::ifstream(path);
+        if (!in->is_open())
+        {
+            spdlog::error("Sketch: Couldn't open {0}: '{1}'", path.filename().string(), path.string());
+            return 1;
+        }
+        streams.insert({ path.filename().string(), in });
     }
 
     spdlog::info("Parser: Parsing started");
 
+    int result;
+
     // Parse
 
-    int result;
-    if ((result = Parse(setupIn)) != 0)
+    for (const auto& v : streams)
     {
-        setupIn.close();
-        loopIn.close();
-        return result;
+        int result;
+        if ((result = Parse(*v.second)) != 0)
+        {
+            return result;
+        }
     }
-
-    if ((result = Parse(loopIn)) != 0)
-    {
-        setupIn.close();
-        loopIn.close();
-        return result;
-    }
-
-    setupIn.close();
-    loopIn.close();
-    setupIn.open(setupPath);
-    loopIn.open(loopPath);
 
     spdlog::info("Parser: Parsing finished");
+
+    // Reopen for compilation
+    for (auto& v : streams)
+    {
+        v.second->close();
+        v.second->open(sketchFolder + "/" + v.first);
+    }
 
     // Compile
 
     spdlog::info("Compiler: Compiling started");
 
-    if ((result = Compile(setupIn, true)) != 0)
+    for (const auto& v : streams)
     {
-        setupIn.close();
-        loopIn.close();
-        return result;
+        int result;
+        if ((result = Compile(*v.second, v.first)) != 0)
+        {
+            return result;
+        }
     }
 
-    if ((result = Compile(loopIn, false)) != 0)
+    for (const auto& v : streams)
     {
-        setupIn.close();
-        loopIn.close();
-        return result;
+        if (v.second->is_open()) v.second->close();
+        delete v.second;
     }
-
-    setupIn.close();
-    loopIn.close();
+    streams.clear();
 
     spdlog::info("Compiler: Compiling finished");
 
@@ -144,29 +169,43 @@ int Sketch::DoDir(const std::string folderPath)
     return 0;
 }
 
-int Sketch::Compile(std::ifstream& in, bool isSetup)
+int Sketch::Compile(std::ifstream& in, const std::string& _funcName)
 {
+    std::string funcName = _funcName;
+    replace(funcName, ".cino", "");    
+
+    Func func{};
+    std::pair<int, FuncHeader> head = ReadFunctionHeader(in, funcName);
+    if (head.first != 0)
+    {
+        return 1;
+    }
+    func.header = head.second;
+
+    prog.funcs.insert({ funcName, func });
+
     int lineNum = 1;
     std::string line;
     while (std::getline(in, line))
     {
         if (line.empty()) continue;
         if (line.front() == '#') continue;
-
+        if (line.front() == '-') continue;
+        
         if (line.at(0) != '/')
         {
-            spdlog::error("Compiler: [{0}:0] Syntax error: Expected '/' at beginning", lineNum);
+            spdlog::error("Compiler: [{0}:{1}] Syntax error: Expected '/' at beginning", funcName, lineNum);
             return 1;
         }
-
+        
         if (line.size() < 2)
         {
-            spdlog::error("Compiler: [{0}:1] Syntax error: A '/' should always be followed by a command", lineNum);
+            spdlog::error("Compiler: [{0}:{1}] Syntax error: A '/' should always be followed by a command", funcName, lineNum);
             return 1;
         }
 
         int result;
-        if ((result = cmdMgr.CompileLine(prog, line, lineNum, isSetup)) != 0)
+        if ((result = cmdMgr.CompileLine(prog, line, lineNum, funcName)) != 0)
         {
             return 1;
         }
@@ -235,16 +274,17 @@ int Sketch::Parse(std::ifstream& in)
     {
         if (line.empty()) continue;
         if (line.front() == '#') continue;
+        if (line.front() == '-') continue;
 
         if (line.at(0) != '/')
         {
-            spdlog::error("Parser: [{0}:0] Syntax error: Expected '/' at beginning", lineNum);
+            spdlog::error("Parser: [{0}] Syntax error: Expected '/' at beginning", lineNum);
             return 1;
         }
 
         if (line.size() < 2)
         {
-            spdlog::error("Parser: [{0}:1] Syntax error: A '/' should always be followed by a command", lineNum);
+            spdlog::error("Parser: [{0}] Syntax error: A '/' should always be followed by a command", lineNum);
             return 1;
         }
 
@@ -258,4 +298,77 @@ int Sketch::Parse(std::ifstream& in)
     }
 
     return 0;
+}
+
+std::pair<int, FuncHeader> Sketch::ReadFunctionHeader(std::ifstream& in, const std::string& func)
+{
+    FuncHeader header{};
+    header.returnType = "void";
+
+    int lineNum = 1;
+    do
+    {
+        std::string line;
+        std::getline(in, line);
+
+        if (line.empty())
+        {
+            lineNum++;
+            continue;
+        }
+        if (line.front() == '#')
+        {
+            lineNum++;
+            continue;
+        }
+
+        if (line.at(0) != '-')
+        {
+            spdlog::error("Parser: [{0}:{1}] Syntax error: Expected '-' at function header", func, lineNum);
+            return { 1, header };
+        }
+
+        if (line.size() < 2)
+        {
+            spdlog::error("Parser: [{0}:{1}] Syntax error: No function header option", func, lineNum);
+            return { 1, header };
+        }
+
+        std::vector<std::string> split = SplitString(line);
+        if (split.size() < 2)
+        {
+            spdlog::error("Parser: [{0}:{1}] Syntax error: No function header option", func, lineNum);
+            return { 1, header };
+        }
+
+        if (split[0] == "-rt")
+        {
+            header.returnType = split[1];
+        }
+        else if (split[0] == "-p")
+        {
+            std::vector<std::string> paramPairs = SplitString(split[1], ";");
+
+            for (const std::string& pair : paramPairs)
+            {
+                std::vector<std::string> param = SplitString(pair, ":");
+                if (param.size() < 2)
+                {
+                    spdlog::error("Parser: [{0}:{1}] Syntax error: Var type and name expected for function parameter ({2})", func, lineNum, pair);
+                    return { 1, header };
+                }
+
+                header.params.push_back({ param[1], StrToVarType(param[0]) });
+            }
+        }
+        else
+        {
+            spdlog::error("Parser: [{0}:{1}] Syntax error: Unknown function header option: '{2}'", func, lineNum, split[0]);
+            return { 1, header };
+        }
+
+        lineNum++;
+    } while (in.peek() == '-');
+
+    return { 0, header };
 }

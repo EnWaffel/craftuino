@@ -6,6 +6,7 @@
 
 enum VarType
 {
+    VOID,
     INT,
     BOOL,
     FLOAT,
@@ -25,16 +26,21 @@ struct Cmd
     std::vector<std::string> args;
 };
 
-struct CXXFile
+struct FuncHeader
 {
+    std::string returnType;
+    std::vector<std::pair<std::string, VarType>> params;
+};
+
+struct Func
+{
+    FuncHeader header;
     std::vector<Var> vars;
     std::vector<Cmd> cmds;
 };
 
 struct Program
 {
-    std::vector<Var> vars;
-    std::vector<Cmd> setupCmds;
-    std::vector<Cmd> loopCmds;
-    std::vector<CXXFile> others;
+    std::vector<Var> globalVars;
+    std::unordered_map<std::string, Func> funcs;
 };

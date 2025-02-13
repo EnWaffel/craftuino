@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <filesystem>
+#include <iostream>
 
 namespace fs = std::filesystem;
 
@@ -14,8 +15,8 @@ Generator::Generator(const std::string& sketchFolder, CommandManager& cmdMgr)
 
 int Generator::GenerateCXXCode(Program& prog)
 {
-    spdlog::info("Generator: [  0%] Generation started");
-    numToGenerate = prog.others.size() + 2;
+    spdlog::info("Generator: Generation started");
+    numToGenerate = prog.funcs.size();
 
 #ifdef __linux__
 	sketchName = fs::path(sketchFolder).filename();
@@ -33,23 +34,8 @@ int Generator::GenerateCXXCode(Program& prog)
     fs::create_directories(sketchFolder + "/build/gen/" + sketchName);
     fs::create_directories(sketchFolder + "/build/bin");
 
-    int result;
-    if ((result = GenIno(prog)) != 0)
-    {
-        return result;
-    }
-
-    spdlog::info("Generator: [100%] Generation finished");
-
-    return 0;
-}
-
-int Generator::GenIno(Program& prog)
-{
     std::string path = sketchFolder + sketchOutPath + "/" + sketchName + ".ino";
-    LogGenNext(path);
-
-    std::ofstream out(path);
+    out.open(path);
     if (!out.is_open())
     {
         spdlog::error("Generator: Couldn't write to {0}", path);
@@ -59,37 +45,72 @@ int Generator::GenIno(Program& prog)
     out << "#include <Arduino.h>";
     LN;
 
-    out << "void setup() {";
-    LN;
-
-    for (Cmd& cmd : prog.setupCmds)
+    for (auto& v : prog.funcs)
     {
-        cmdMgr->GenerateCommand(prog, cmd, out);
+        if (v.first == "setup" || v.first == "loop") continue;
+        GenFuncDeclaration(prog, v.second, v.first);
+        out << ';';
         LN;
     }
 
-    out << "}";
-
-    LN;
-
-    out << "void loop() {";
-    LN;
-
-    for (Cmd& cmd : prog.loopCmds)
+    for (auto& v : prog.funcs)
     {
-        cmdMgr->GenerateCommand(prog, cmd, out);
+        int result;
+        if ((result = GenFunc(prog, v.second, v.first)) != 0)
+        {
+            return result;
+        }
         LN;
     }
-
-    out << "}";
 
     out.close();
-    return 0;void LogGenNext();
+    spdlog::info("Generator: Generation finished");
+
+    return 0;
 }
 
-int Generator::GenFile(Program& prog, const std::string& name)
+int Generator::GenFunc(Program& prog, Func& func, const std::string& name)
 {
+    LogGenNext(name);
+
+    GenFuncDeclaration(prog, func, name);
     
+    out << '{';
+    LN;
+
+    for (Cmd& cmd : func.cmds)
+    {
+        cmdMgr->GenerateCommand(prog, cmd, out);
+        LN;
+    }
+
+    out << '}';
+
+    return 0;
+}
+
+void Generator::GenFuncDeclaration(Program& prog, Func& func, const std::string& name)
+{
+    out << func.header.returnType;
+    SPACE;
+    out << name;
+    out << '(';
+
+    int i = 0;
+    for (const auto& v : func.header.params)
+    {
+        out << VarTypeToStr(v.second);
+        SPACE;
+        out << v.first;
+
+        if (i < func.header.params.size() - 1)
+        {
+            out << ',';
+        }
+        i++;
+    }
+
+    out << ')';
 }
 
 float Generator::GetGenPercent()
@@ -100,5 +121,5 @@ float Generator::GetGenPercent()
 void Generator::LogGenNext(const std::string& path)
 {
     numGenerated++;
-    spdlog::info("Generator: [ {0}%] Generating: {1}", GetGenPercent(), path);
+    spdlog::info("Generator: [ {0}%] Generating: {1}", (int)GetGenPercent(), path);
 }

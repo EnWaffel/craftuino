@@ -15,13 +15,14 @@ private:
     std::string sketchOutPath;
     float numToGenerate = 0.0f;
     float numGenerated = 0.0f;
+    std::ofstream out;
 public:
     Generator(const std::string& sketchFolder, CommandManager& cmdMgr);
 
     int GenerateCXXCode(Program& prog);
 private:
-    int GenIno(Program& prog);
-    int GenFile(Program& prog, const std::string& name);
+    int GenFunc(Program& prog, Func& func, const std::string& name);
+    void GenFuncDeclaration(Program& prog, Func& func, const std::string& name);
     float GetGenPercent();
     void LogGenNext(const std::string& path);
 };

@@ -1,6 +1,6 @@
 [arduino]
-avrdude=/home/enwaffel/.arduino15/packages/arduino/tools/avrdude/6.3.0-arduino17/bin/avrdude
-avrdude_config=/home/enwaffel/.arduino15/packages/arduino/tools/avrdude/6.3.0-arduino17/etc/avrdude.conf
+avrdude=~/.arduino15/packages/arduino/tools/avrdude/6.3.0-arduino17/bin/avrdude
+avrdude_config=~/.arduino15/packages/arduino/tools/avrdude/6.3.0-arduino17/etc/avrdude.conf
 compiler=arduino-cli
 
 [sketch]

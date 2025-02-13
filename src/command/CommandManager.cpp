@@ -3,25 +3,6 @@
 
 #include <iostream>
 #include <vector>
-#include <sstream>
-#include <regex>
-
-std::vector<std::string> SplitString(const std::string& str) {
-    std::vector<std::string> result;
-    std::regex rgx(R"((\"[^\"]*\")|\S+|\s*)");
-    
-    auto words_begin = std::sregex_iterator(str.begin(), str.end(), rgx);
-    auto words_end = std::sregex_iterator();
-    
-    for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
-        std::string match = (*i).str();
-        if (!match.empty() && match.find(' ') == std::string::npos) {
-            result.push_back(match);
-        }
-    }
-
-    return result;
-}
 
 CommandManager::~CommandManager()
 {
@@ -68,7 +49,7 @@ int CommandManager::CheckLine(const std::string& line, int lineNum)
     return 0;
 }
 
-int CommandManager::CompileLine(Program& prog, const std::string& line, int lineNum, bool isSetup)
+int CommandManager::CompileLine(Program& prog, const std::string& line, int lineNum, const std::string& func)
 {
     std::string realLine = line.substr(1);
     std::vector<std::string> split = SplitString(realLine);
@@ -97,14 +78,7 @@ int CommandManager::CompileLine(Program& prog, const std::string& line, int line
         return result.first;
     }
 
-    if (isSetup)
-    {
-        prog.setupCmds.push_back(result.second);
-    }
-    else
-    {
-        prog.loopCmds.push_back(result.second);
-    }
+    prog.funcs.at(func).cmds.push_back(result.second);
 
     return 0;
 }
