@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 enum VarType
 {
@@ -24,9 +25,16 @@ struct Cmd
     std::vector<std::string> args;
 };
 
+struct CXXFile
+{
+    std::vector<Var> vars;
+    std::vector<Cmd> cmds;
+};
+
 struct Program
 {
     std::vector<Var> vars;
     std::vector<Cmd> setupCmds;
     std::vector<Cmd> loopCmds;
+    std::vector<CXXFile> others;
 };

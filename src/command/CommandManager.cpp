@@ -108,3 +108,14 @@ int CommandManager::CompileLine(Program& prog, const std::string& line, int line
 
     return 0;
 }
+
+void CommandManager::GenerateCommand(Program& prog, Cmd& cmd, std::ofstream& out)
+{
+    if (commands.count(cmd.name) < 1)
+    {
+        out << "//invalid cmd '" << cmd.name << "'";
+        return;
+    }
+
+    commands.at(cmd.name)->Generate(prog, cmd, out);
+}

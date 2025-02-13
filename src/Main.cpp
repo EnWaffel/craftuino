@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
 
     args.add_argument("-c").help("Path to the config file").default_value("config.ini").nargs(1);
     args.add_argument("-s").help("Path to the sketch folder").required().nargs(1);
+    args.add_argument("-v").help("Show verbose output").default_value(false).nargs(0);
   
     try {
       args.parse_args(argc, argv);
@@ -29,6 +30,8 @@ int main(int argc, char *argv[])
       return 1;
     }
   
+    Config::verbose = args.is_used("-v");
+
     int result;
     if ((result = Config::Load(args.get("-c"))) != 0)
     {

@@ -14,6 +14,8 @@ add_executable(craftuino
 "src/Sketch.cpp"
 "src/command/CommandManager.cpp"
 "src/command/cmds/DelayCmd.cpp"
+"src/command/cmds/PinModeCmd.cpp"
+"src/command/cmds/SetPinCmd.cpp"
 "src/Utils.cpp"
 "src/Generator.cpp"
 )

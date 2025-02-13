@@ -2,7 +2,7 @@
 
 #include "../Command.h"
 
-class DelayCmd : public Command
+class SetPinCmd : public Command
 {
 public:
     int CheckSyntax(const std::vector<std::string>& args) override;

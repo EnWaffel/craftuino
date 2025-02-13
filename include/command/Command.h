@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <string>
+#include <fstream>
 
 class Command
 {
@@ -15,5 +16,5 @@ public:
 
     virtual int CheckSyntax(const std::vector<std::string>& args) = 0;
     virtual std::pair<int, Cmd> Compile(const std::vector<std::string>& args) = 0;
-    virtual std::string Generate(Cmd& cmd) = 0;
+    virtual void Generate(Program& prog, Cmd& cmd, std::ofstream& out) = 0;
 };
