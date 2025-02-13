@@ -35,9 +35,11 @@ int ExecuteProgram(const std::string& name, std::vector<std::string>& args)
     }
 
     int exitCode = pclose(proc);
-    if (WIFEXITED(exitCode)) {
+#ifdef __linux__
+	if (WIFEXITED(exitCode)) {
         exitCode = WEXITSTATUS(exitCode);
     }
+#endif
 
     return exitCode;
 }

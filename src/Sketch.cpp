@@ -23,7 +23,12 @@ Sketch::~Sketch()
 int Sketch::DoDir(const std::string folderPath)
 {
     sketchFolder = folderPath;
-    sketchName = fs::path(sketchFolder).filename();
+#ifdef __linux__
+	sketchName = fs::path(sketchFolder).filename();
+#endif
+#ifdef _WIN32
+	sketchName = fs::path(sketchFolder).filename().string();
+#endif
 
     fs::path setupPath = folderPath + "/setup.ino";
     fs::path loopPath = folderPath + "/loop.ino";

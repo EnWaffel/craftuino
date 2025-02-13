@@ -1,5 +1,5 @@
 ----- INSTALLATION -----
-Run the setup script for your operating system. After the script finished run the build script for your operating system and you're good to go!
+Run the setup script for your operating system. (and installArduinoCLI.bat for Windows) After the script finished run the build script for your operating system and you're good to go!
 
 
 

@@ -17,7 +17,12 @@ int Generator::GenerateCXXCode(Program& prog)
     spdlog::info("Generator: [  0%] Generation started");
     numToGenerate = prog.others.size() + 2;
 
-    sketchName = fs::path(sketchFolder).filename();
+#ifdef __linux__
+	sketchName = fs::path(sketchFolder).filename();
+#endif
+#ifdef _WIN32
+	sketchName = fs::path(sketchFolder).filename().string();
+#endif
     sketchOutPath = "/build/gen/" + sketchName;
 
     if (fs::exists(sketchFolder + "/build"))
