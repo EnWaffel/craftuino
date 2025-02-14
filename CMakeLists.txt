@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 
 add_subdirectory(depend/spdlog)
 
-set(VER 0.1.0)
+set(VER 0.1.7)
 
 add_compile_definitions(-DCRAFTUINO_VERSION="${VER}")
 
@@ -21,6 +21,8 @@ add_executable(craftuino
 "src/command/cmds/GVarCmd.cpp"
 "src/command/cmds/SetCmd.cpp"
 "src/command/cmds/ExecuteCmd.cpp"
+"src/command/cmds/GetPinCmd.cpp"
+"src/command/cmds/SerialCmd.cpp"
 "src/Utils.cpp"
 "src/Generator.cpp"
 "src/command/Command.cpp"

@@ -74,16 +74,13 @@ bool EndsWith(const std::string& fullString, const std::string& ending)
 
 std::vector<std::string> SplitString(const std::string& str) {
     std::vector<std::string> result;
-    std::regex rgx(R"((\"[^\"]*\")|\S+|\s*)");
-    
+    std::regex rgx(R"((\"[^\"]*\")|\S+)");
+
     auto words_begin = std::sregex_iterator(str.begin(), str.end(), rgx);
     auto words_end = std::sregex_iterator();
-    
+
     for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
-        std::string match = (*i).str();
-        if (!match.empty() && match.find(' ') == std::string::npos) {
-            result.push_back(match);
-        }
+        result.push_back((*i).str());
     }
 
     return result;

@@ -29,6 +29,8 @@ Sketch::Sketch()
     cmdMgr.AddCommand("gvar", new GVarCmd);
     cmdMgr.AddCommand("set", new SetCmd);
     cmdMgr.AddCommand("execute", new ExecuteCmd);
+    cmdMgr.AddCommand("getpin", new GetPinCmd);
+    cmdMgr.AddCommand("serial", new SerialCmd);
 
     CUR_SKETCH = this;
 }
@@ -324,13 +326,13 @@ int Sketch::Parse(std::ifstream& in)
 
         if (line.at(0) != '/')
         {
-            spdlog::error("Parser: [{0}] Syntax error: Expected '/' at beginning", lineNum);
+            spdlog::error("Parser: [{0}] Syntax error: Expected '/' at beginning", lineNum + 1);
             return 1;
         }
 
         if (line.size() < 2)
         {
-            spdlog::error("Parser: [{0}] Syntax error: A '/' should always be followed by a command", lineNum);
+            spdlog::error("Parser: [{0}] Syntax error: A '/' should always be followed by a command", lineNum + 1);
             return 1;
         }
 

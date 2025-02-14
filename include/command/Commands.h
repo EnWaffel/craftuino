@@ -8,3 +8,5 @@
 #include "cmds/GVarCmd.h"
 #include "cmds/SetCmd.h"
 #include "cmds/ExecuteCmd.h"
+#include "cmds/GetPinCmd.h"
+#include "cmds/SerialCmd.h"

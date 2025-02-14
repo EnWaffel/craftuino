@@ -151,5 +151,13 @@ float Generator::GetGenPercent()
 void Generator::LogGenNext(const std::string& path)
 {
     numGenerated++;
-    spdlog::info("Generator: [ {0}%] Generating: {1}", (int)GetGenPercent(), path);
+    int percent = GetGenPercent();
+    if (percent >= 100)
+    {
+        spdlog::info("Generator: [{0}%] Generating: {1}", percent, path);
+    }
+    else
+    {
+        spdlog::info("Generator: [ {0}%] Generating: {1}", percent, path);
+    }
 }

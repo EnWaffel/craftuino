@@ -3,3 +3,4 @@ build
 depend
 testsketch
 arduino-cli
+test
