@@ -17,12 +17,20 @@ bool replace(std::string& str, const std::string& from, const std::string& to) {
     return true;
 }
 
+Sketch* Sketch::CUR_SKETCH = nullptr;
+
 Sketch::Sketch()
 {
     cmdMgr.AddCommand("delay", new DelayCmd);
     cmdMgr.AddCommand("pinmode", new PinModeCmd);
     cmdMgr.AddCommand("setpin", new SetPinCmd);
     cmdMgr.AddCommand("function", new FunctionCmd);
+    cmdMgr.AddCommand("var", new VarCmd);
+    cmdMgr.AddCommand("gvar", new GVarCmd);
+    cmdMgr.AddCommand("set", new SetCmd);
+    cmdMgr.AddCommand("execute", new ExecuteCmd);
+
+    CUR_SKETCH = this;
 }
 
 Sketch::~Sketch()
@@ -103,7 +111,7 @@ int Sketch::DoDir(const std::string folderPath)
         }
     }
 
-    spdlog::info("Parser: Parsing finished");
+    spdlog::info("Parser: Parsing finished with 0 warnings and 0 errors");
 
     // Reopen for compilation
     for (auto& v : streams)
@@ -132,7 +140,29 @@ int Sketch::DoDir(const std::string folderPath)
     }
     streams.clear();
 
-    spdlog::info("Compiler: Compiling finished");
+    for (std::string& f : prog.callOnSetupFuncs)
+    {
+        if (prog.funcs.count(f) < 1)
+        {
+            spdlog::error("Compiler: Link error: (function header '-cos') Function '{0}' not found", f);
+            return 1;
+        }
+
+        Func& func = prog.funcs.at(f);
+        if (StrToVarType(func.header.returnType) != VarType::VOID)
+        {
+            spdlog::error("Compiler: [FUNC:{0}] Link error: (function header '-cos') Functions declared to be called on setup should have a return type of 'void'", f);
+            return 1;
+        }
+        
+        if (!func.header.params.empty())
+        {
+            spdlog::error("Compiler: [FUNC:{0}] Link error: (function header '-cos') Functions declared to be called on setup should not have any parameters", f);
+            return 1;
+        }
+    }
+
+    spdlog::info("Compiler: Compiling finished with 0 warnings and 0 errors");
 
     Generator gen(sketchFolder, cmdMgr);
     
@@ -142,29 +172,32 @@ int Sketch::DoDir(const std::string folderPath)
         return result;
     }
 
-    // Build
-    spdlog::info("Builder: Build started");
-
-    if ((result = Build()) != 0)
+    if (!onlyGenerate)
     {
-        spdlog::error("Sketch: Build terminated");
-        return result;
+        // Build
+        spdlog::info("Sketch: Build started");
+
+        if ((result = Build()) != 0)
+        {
+            spdlog::error("Sketch: Build terminated");
+            return result;
+        }
+
+        spdlog::info("Sketch: Build finished");
+
+        // Upload
+        spdlog::info("Sketch: Upload started");
+
+        if ((result = Upload()) != 0)
+        {
+            spdlog::error("Sketch: Upload terminated");
+            return result;
+        }
+
+        spdlog::info("Sketch: Upload finished");
     }
-
-    spdlog::info("Builder: Build finished");
-
-    // Upload
-    spdlog::info("Uploader: Upload started");
-
-    if ((result = Upload()) != 0)
-    {
-        spdlog::error("Sketch: Upload terminated");
-        return result;
-    }
-
-    spdlog::info("Uploader: Upload finished");
-
-    spdlog::info("Sketch: Finished! Bye!");
+    
+    spdlog::info("Sketch: Work done. Bye!");
 
     return 0;
 }
@@ -172,7 +205,7 @@ int Sketch::DoDir(const std::string folderPath)
 int Sketch::Compile(std::ifstream& in, const std::string& _funcName)
 {
     std::string funcName = _funcName;
-    replace(funcName, ".cino", "");    
+    replace(funcName, ".cino", "");
 
     Func func{};
     std::pair<int, FuncHeader> head = ReadFunctionHeader(in, funcName);
@@ -181,6 +214,7 @@ int Sketch::Compile(std::ifstream& in, const std::string& _funcName)
         return 1;
     }
     func.header = head.second;
+    func.name = funcName;
 
     prog.funcs.insert({ funcName, func });
 
@@ -188,9 +222,21 @@ int Sketch::Compile(std::ifstream& in, const std::string& _funcName)
     std::string line;
     while (std::getline(in, line))
     {
-        if (line.empty()) continue;
-        if (line.front() == '#') continue;
-        if (line.front() == '-') continue;
+        if (line.empty())
+        {
+            lineNum++;
+            continue;
+        }
+        if (line.front() == '#')
+        {
+            lineNum++;
+            continue;
+        }
+        if (line.front() == '-')
+        {
+            lineNum++;
+            continue;
+        }
         
         if (line.at(0) != '/')
         {
@@ -205,7 +251,7 @@ int Sketch::Compile(std::ifstream& in, const std::string& _funcName)
         }
 
         int result;
-        if ((result = cmdMgr.CompileLine(prog, line, lineNum, funcName)) != 0)
+        if ((result = cmdMgr.CompileLine(prog, line, lineNum, funcName, false)) != 0)
         {
             return 1;
         }
@@ -234,7 +280,7 @@ int Sketch::Build()
     
     if (code != 0)
     {
-        spdlog::error("Builder: Build failed");
+        spdlog::error("Sketch: Build failed");
         return code;
     }
 
@@ -259,7 +305,7 @@ int Sketch::Upload()
     
     if (code != 0)
     {
-        spdlog::error("Uploader: Upload failed");
+        spdlog::error("Sketch: Upload failed");
         return code;
     }
 
@@ -358,7 +404,26 @@ std::pair<int, FuncHeader> Sketch::ReadFunctionHeader(std::ifstream& in, const s
                     return { 1, header };
                 }
 
-                header.params.push_back({ param[1], StrToVarType(param[0]) });
+                VarType type = StrToVarType(param[0]);
+                if (type == VarType::INVALID)
+                {
+                    spdlog::error("Parser: [{0}:{1}] Syntax error: Invalid Var type: '{3}' ({2})", func, lineNum, pair, param[0]);
+                    return { 1, header };
+                }
+
+                header.params.push_back({ param[1], type });
+            }
+        }
+        else if (split[0] == "-cos")
+        {
+            for (int i = 1; i < split.size(); i++)
+            {
+                std::string s = split[i];
+                if (s == ":this:")
+                {
+                    s = func;
+                }
+                prog.callOnSetupFuncs.push_back(s);
             }
         }
         else

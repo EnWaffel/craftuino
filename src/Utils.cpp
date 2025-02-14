@@ -6,11 +6,27 @@
 #include <sstream>
 #include <regex>
 
-bool IsNumber(const std::string& s)
+bool IsNumber(const std::string& str)
 {
-    std::string::const_iterator it = s.begin();
-    while (it != s.end() && std::isdigit(*it)) ++it;
-    return !s.empty() && it == s.end();
+    bool hasDecimal = false;
+    bool hasDigit = false;
+    
+    if (str.empty()) return false;
+    
+    size_t start = (str[0] == '-' || str[0] == '+') ? 1 : 0;
+    
+    for (size_t i = start; i < str.size(); ++i) {
+        if (std::isdigit(str[i])) {
+            hasDigit = true;
+        } else if (str[i] == '.') {
+            if (hasDecimal) return false;
+            hasDecimal = true;
+        } else {
+            return false;
+        }
+    }
+    
+    return hasDigit;
 }
 
 int ExecuteProgram(const std::string& name, std::vector<std::string>& args)
@@ -110,8 +126,20 @@ VarType StrToVarType(const std::string& str)
     {
         return VarType::LONG;
     }
+    else if (str == "STRING" || str == "string")
+    {
+        return VarType::STRING;
+    }
+    else if (str == "CHAR" || str == "char")
+    {
+        return VarType::CHAR;
+    }
+    else if (str == "VOID" || str == "void")
+    {
+        return VarType::VOID;
+    }
 
-    return VarType::VOID;
+    return VarType::INVALID;
 }
 
 std::string VarTypeToStr(VarType type)
@@ -136,6 +164,74 @@ std::string VarTypeToStr(VarType type)
     {
         return "long";
     }
+    else if (type == VarType::STRING)
+    {
+        return "const char*";
+    }
+    else if (type == VarType::CHAR)
+    {
+        return "char";
+    }
 
-    return "void";
+    return "auto";
 }   
+
+VarType EstimateVarTypeByValue(const std::string& value)
+{
+    if (value.empty()) return VarType::INVALID;
+
+    if (IsNumber(value))
+    {
+        if (value.find(".") != std::string::npos)
+        {
+            return VarType::FLOAT;
+        }
+        else
+        {
+            return VarType::INT;
+        }
+    }
+    else
+    {
+        std::string lower = ToLowercase(value);
+        if (lower == "true" || lower == "false")
+        {
+            return VarType::BOOL;
+        }
+
+        if (value.size() >= 2)
+        {
+            if (value.front() == '\"' || value.back() == '\"')
+            {
+                return VarType::STRING;
+            } else if (value.front() == '\'' || value.back() == '\'')
+            {
+                return VarType::CHAR;
+            }
+        }
+    }
+
+    return VarType::OBJ;
+}
+
+std::string ToLowercase(const std::string& str)
+{
+    std::string result;
+    for (char c : str) result.push_back(tolower(c));
+    return result;
+}
+
+Var* GetVarByName(Program* prog, Func* func, const std::string& name)
+{
+    for (Var& v : prog->globalVars)
+    {
+        if (v.name == name) return &v;
+    }
+
+    for (Var& v : func->vars)
+    {
+        if (v.name == name) return &v;
+    }
+
+    return nullptr;
+}

@@ -4,21 +4,14 @@ int PinModeCmd::CheckSyntax(const std::vector<std::string>& args)
 {
     if (args.size() < 2)
     {
-        spdlog::error("PinModeCmd: Usage: /pinmode [pin(int)] [INPUT, OUTPUT(string)]");
-        return 1;
-    }
-
-    if (!IsNumber(args[0]))
-    {
-        spdlog::error("PinModeCmd: ARG[1] should be an integer");
-        spdlog::error("PinModeCmd: Usage: /pinmode [pin(int)] [INPUT, OUTPUT(string)]");
+        spdlog::error("PinModeCmd: Usage: /pinmode [pin(int, var)] [INPUT, OUTPUT(option)]");
         return 1;
     }
 
     if (args[1] != "INPUT" && args[1] != "OUTPUT")
     {
-        spdlog::error("PinModeCmd: ARG[2] should be a string ('INPUT' or 'OUTPUT')");
-        spdlog::error("PinModeCmd: Usage: /pinmode [pin(int)] [INPUT, OUTPUT(string)]");
+        spdlog::error("PinModeCmd: ARG[2] should be an option ('INPUT' or 'OUTPUT')");
+        spdlog::error("PinModeCmd: Usage: /pinmode [pin(int, var)] [INPUT, OUTPUT(option)]");
         return 1;
     }
 
@@ -38,10 +31,10 @@ void PinModeCmd::Generate(Program& prog, Cmd& cmd, std::ofstream& out)
 {
     if (cmd.args[1] == "INPUT")
     {
-        out << "pinMode(" << atoi(cmd.args[0].c_str()) << ", INPUT);";
+        out << "pinMode(" << cmd.args[0] << ", INPUT);";
     }
     else if (cmd.args[1] == "OUTPUT")
     {
-        out << "pinMode(" << atoi(cmd.args[0].c_str()) << ", OUTPUT);";
+        out << "pinMode(" << cmd.args[0] << ", OUTPUT);";
     }
 }

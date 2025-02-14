@@ -15,6 +15,6 @@ public:
 
     void AddCommand(const std::string& name, Command* processer);
     int CheckLine(const std::string& line, int lineNum);
-    int CompileLine(Program& prog, const std::string& line, int lineNum, const std::string& func);
+    int CompileLine(Program& prog, const std::string& line, int lineNum, const std::string& func, bool isSubCmd = false, Cmd* subCmd = nullptr);
     void GenerateCommand(Program& prog, Cmd& cmd, std::ofstream& out);
 };

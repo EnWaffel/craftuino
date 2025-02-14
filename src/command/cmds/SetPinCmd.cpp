@@ -4,21 +4,14 @@ int SetPinCmd::CheckSyntax(const std::vector<std::string>& args)
 {
     if (args.size() < 2)
     {
-        spdlog::error("SetPinCmd: Usage: /setpin [pin(int)] [HIGH, LOW(string)]");
-        return 1;
-    }
-
-    if (!IsNumber(args[0]))
-    {
-        spdlog::error("SetPinCmd: ARG[1] should be an integer");
-        spdlog::error("SetPinCmd: Usage: /setpin [pin(int)] [HIGH, LOW(string)]");
+        spdlog::error("SetPinCmd: Usage: /setpin [pin(int, var)] [HIGH, LOW(option)]");
         return 1;
     }
 
     if (args[1] != "HIGH" && args[1] != "LOW")
     {
-        spdlog::error("SetPinCmd: ARG[2] should be a string ('HIGH' or 'LOW')");
-        spdlog::error("SetPinCmd: Usage: /setpin [pin(int)] [HIGH, LOW(string)]");
+        spdlog::error("SetPinCmd: ARG[2] should be an option ('HIGH' or 'LOW')");
+        spdlog::error("SetPinCmd: Usage: /setpin [pin(int, var)] [HIGH, LOW(option)]");
         return 1;
     }
 
@@ -38,10 +31,10 @@ void SetPinCmd::Generate(Program& prog, Cmd& cmd, std::ofstream& out)
 {
     if (cmd.args[1] == "HIGH")
     {
-        out << "digitalWrite(" << atoi(cmd.args[0].c_str()) << ", HIGH);";
+        out << "digitalWrite(" << cmd.args[0] << ", HIGH);";
     }
     else if (cmd.args[1] == "LOW")
     {
-        out << "digitalWrite(" << atoi(cmd.args[0].c_str()) << ", LOW);";
+        out << "digitalWrite(" << cmd.args[0] << ", LOW);";
     }
 }

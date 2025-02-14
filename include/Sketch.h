@@ -8,12 +8,15 @@
 
 class Sketch
 {
-private:
+public:
+    static Sketch* CUR_SKETCH;
+public:
     std::string sketchFolder;
     std::string sketchName;
     CommandManager cmdMgr;
     Program prog;
     std::unordered_map<std::string, std::ifstream*> streams;
+    bool onlyGenerate = false;
 public:
     Sketch();
     ~Sketch();

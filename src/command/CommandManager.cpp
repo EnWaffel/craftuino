@@ -4,6 +4,26 @@
 #include <iostream>
 #include <vector>
 
+bool VarExists(Program& prog, Func& func, bool global, const std::string& name)
+{
+    if (global)
+    {
+        for (Var& var : prog.globalVars)
+        {
+            if (var.name == name) return true;
+        }
+    }
+    else
+    {
+        for (Var& var : func.vars)
+        {
+            if (var.name == name) return true;
+        }
+    }
+
+    return false;
+}
+
 CommandManager::~CommandManager()
 {
     for (const auto& v : commands)
@@ -49,7 +69,7 @@ int CommandManager::CheckLine(const std::string& line, int lineNum)
     return 0;
 }
 
-int CommandManager::CompileLine(Program& prog, const std::string& line, int lineNum, const std::string& func)
+int CommandManager::CompileLine(Program& prog, const std::string& line, int lineNum, const std::string& func, bool isSubCmd, Cmd* subCmd)
 {
     std::string realLine = line.substr(1);
     std::vector<std::string> split = SplitString(realLine);
@@ -70,6 +90,7 @@ int CommandManager::CompileLine(Program& prog, const std::string& line, int line
     }
 
     Command* cmd = commands.at(cmdName);
+    cmd->SetProgramAndFunc(&prog, &prog.funcs.at(func));
 
     std::pair<int, Cmd> result;
     if ((result = cmd->Compile(realSplit)).first != 0)
@@ -78,7 +99,34 @@ int CommandManager::CompileLine(Program& prog, const std::string& line, int line
         return result.first;
     }
 
-    prog.funcs.at(func).cmds.push_back(result.second);
+    if (!isSubCmd)
+    {
+        prog.funcs.at(func).cmds.push_back(result.second);
+    }
+    else
+    {
+        *subCmd = result.second;
+    }
+    
+    if (result.second.isVar)
+    {
+        Var var = { EstimateVarTypeByValue(result.second.args[1]), result.second.args[0], result.second.args[2] };
+
+        if (VarExists(prog, prog.funcs.at(func), cmdName == "gvar", var.name))
+        {
+            spdlog::error("Compiler: [{0}:1] Compilation terminated: Compile error: Variable already defined: '{1}'", lineNum + 1, var.name);
+            return 1;
+        }
+        
+        if (cmdName == "gvar")
+        {
+            prog.globalVars.push_back(var);
+        }
+        else
+        {
+            prog.funcs.at(func).vars.push_back(var);
+        }
+    }
 
     return 0;
 }
