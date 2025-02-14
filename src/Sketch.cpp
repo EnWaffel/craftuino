@@ -124,7 +124,7 @@ int Sketch::DoDir(const std::string folderPath)
 
     // Compile
 
-    spdlog::info("Compiler: Compiling started");
+    spdlog::info("Compiler: Compilation started");
 
     for (const auto& v : streams)
     {
@@ -164,7 +164,7 @@ int Sketch::DoDir(const std::string folderPath)
         }
     }
 
-    spdlog::info("Compiler: Compiling finished with 0 warnings and 0 errors");
+    spdlog::info("Compiler: Compilation finished with 0 warnings and 0 errors");
 
     Generator gen(sketchFolder, cmdMgr);
     
