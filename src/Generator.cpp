@@ -55,6 +55,14 @@ int Generator::GenerateCXXCode(Program& prog)
     out << "#include <Arduino.h>";
     LN;
 
+    for (std::string& s : prog.includes)
+    {
+        out << "#include <";
+        out << s;
+        out << ">";
+        LN;
+    }
+
     for (auto& v : prog.funcs)
     {
         if (v.first == "setup" || v.first == "loop") continue;

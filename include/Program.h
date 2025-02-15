@@ -58,4 +58,5 @@ struct Program
     std::vector<Var> globalVars;
     std::unordered_map<std::string, Func> funcs;
     std::vector<std::string> callOnSetupFuncs;
+    std::vector<std::string> includes;
 };

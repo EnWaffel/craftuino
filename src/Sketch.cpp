@@ -428,6 +428,14 @@ std::pair<int, FuncHeader> Sketch::ReadFunctionHeader(std::ifstream& in, const s
                 prog.callOnSetupFuncs.push_back(s);
             }
         }
+        else if (split[0] == "-i")
+        {
+            for (int i = 1; i < split.size(); i++)
+            {
+                if (std::find(prog.includes.begin(), prog.includes.end(), split[i]) != prog.includes.end()) continue;
+                prog.includes.push_back(split[i]);
+            }
+        }
         else
         {
             spdlog::error("Parser: [{0}:{1}] Syntax error: Unknown function header option: '{2}'", func, lineNum, split[0]);

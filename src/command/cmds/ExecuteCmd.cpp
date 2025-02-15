@@ -11,7 +11,7 @@ int ExecuteCmd::CheckSyntax(const std::vector<std::string>& args)
 
     if (args[0] == "if" && args.size() < 4)
     {
-        spdlog::error("ExecuteCmd: Usage: /execute if [? (literal, var)] ['=', '|', '&' (option)] [? (literal, var)]");
+        spdlog::error("ExecuteCmd: Usage: /execute if [? (literal, var)] ['=', '|', '&', '>', '<', '>=', '=<' (option)] [? (literal, var)]");
         return 1;
     }
 
@@ -57,6 +57,10 @@ void ExecuteCmd::Generate(Program& prog, Cmd& cmd, std::ofstream& out)
         else if (cmd.args[2] == "&")
         {
             out << "&&";
+        }
+        else
+        {
+            out << cmd.args[2];
         }
 
         out << cmd.args[3];
