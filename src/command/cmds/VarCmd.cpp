@@ -27,7 +27,7 @@ void VarCmd::Generate(Program& prog, Cmd& cmd, std::ofstream& out)
     out << VarTypeToStr(EstimateVarTypeByValue(cmd.args[1]));
     SPACE;
     out << cmd.args[0];
-    out << '='; 
+    out << '=';
     out << cmd.args[1];
     out << ';';
 }
