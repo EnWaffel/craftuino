@@ -1,0 +1,22 @@
+[steps]
+compile=1
+flash=2
+
+[compile-1]
+prog=arduino-cli\arduino-cli.exe
+args=compile --fqbn %board% --build-path %buildpath% %genpath%/%sketch%
+
+[flash-1]
+prog=%appdata%..\..\Local\Arduino15\packages\esp32\tools\esptool_py\4.9.dev3\esptool.exe
+args=--chip %chip% merge_bin -o "%buildpath%\%sketch%.ino.merged.bin" --fill-flash-size 4MB --flash_mode keep --flash_freq keep --flash_size keep 0x1000 "%buildpath%\%sketch%.ino.partitions.bin" 0xe000 "%appdata%..\..\Local\Arduino15\packages\esp32\hardware\esp32\3.1.1/tools/partitions/boot_app0.bin" 0x10000 "%buildpath%\%sketch%.ino.bin"
+
+[flash-2]
+prog=%appdata%..\..\Local\Arduino15\packages\esp32\tools\esptool_py\4.9.dev3\esptool.exe
+args=--chip %chip% --port "%port%" --baud %baud%  --before default_reset --after hard_reset write_flash  -z --flash_mode keep --flash_freq keep --flash_size keep 0x1000 "%buildpath%\%sketch%.ino.bootloader.bin" 0x8000 "%buildpath%\%sketch%.ino.partitions.bin" 0xe000 "%appdata%..\..\Local\Arduino15\packages\esp32\hardware\esp32\3.1.1/tools/partitions/boot_app0.bin" 0x10000 "%buildpath%\%sketch%.ino.bin"
+
+[sketch]
+board=esp32:esp32:esp32
+programmer=esp32
+chip=esp32
+baud=115200
+port=COM5

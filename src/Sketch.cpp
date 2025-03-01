@@ -47,12 +47,15 @@ Sketch::~Sketch()
 int Sketch::DoDir(const std::string folderPath)
 {
     sketchFolder = folderPath;
+    Config::sketchDir = sketchFolder;
 #ifdef __linux__
 	sketchName = fs::path(sketchFolder).filename();
 #endif
 #ifdef _WIN32
 	sketchName = fs::path(sketchFolder).filename().string();
 #endif
+
+    Config::sketchName = sketchName;
 
     fs::path setupPath = folderPath + "/setup.cino";
     fs::path loopPath = folderPath + "/loop.cino";
@@ -268,22 +271,24 @@ int Sketch::Build()
 {
     std::string buildPath = sketchFolder + "/build/bin";
     std::string path = sketchFolder + "/build/gen/" + sketchName;
-    std::vector<std::string> args;
 
-    args.push_back("compile");
-    args.push_back("--fqbn");
-    args.push_back(Config::board);
-    args.push_back("--build-path");
-    args.push_back(buildPath);
-    args.push_back(path);
-    args.push_back(Config::verbose ? "--verbose" : "");
-
-    int code = ExecuteProgram(Config::arduinoCompilerPath, args);
-    
-    if (code != 0)
+    int i = 0;
+    for (WorkStep& step : Config::compileSteps)
     {
-        spdlog::error("Sketch: Build failed");
-        return code;
+        spdlog::info("Sketch: Executing Compile-Step #{0}", i + 1);
+
+        std::vector<std::string> args;
+        args.push_back(Config::ProcessPlaceholders(step.args));
+
+        int code = ExecuteProgram(step.prog, args);
+    
+        if (code != 0)
+        {
+            spdlog::error("Sketch: Build failed (step #{0})", i + 1);
+            return code;
+        }
+
+        i++;
     }
 
     return 0;
@@ -291,10 +296,10 @@ int Sketch::Build()
 
 int Sketch::Upload()
 {
+    /*
+    
     std::string hexPath = sketchFolder + "/build/bin/" + sketchName + ".ino.hex";
-    std::vector<std::string> args;
-
-    args.push_back("\"-C" + Config::avrdudeConfigPath + "\"");
+    args.push_back("\"-C" + Config::flasherPath + "\"");
     args.push_back("-V");
     args.push_back("-p" + Config::chip);
     args.push_back("-c" + Config::programmer);
@@ -302,13 +307,25 @@ int Sketch::Upload()
     args.push_back("-b" + Config::baudRate);
     args.push_back(Config::verbose ? "-v" : "");
     args.push_back("\"-Uflash:w:" + hexPath + "\"");
+    */
 
-    int code = ExecuteProgram(Config::avrdudePath, args);
-    
-    if (code != 0)
+    int i = 0;
+    for (WorkStep& step : Config::flashSteps)
     {
-        spdlog::error("Sketch: Upload failed");
-        return code;
+        spdlog::info("Sketch: Executing Flash-Step #{0}", i + 1);
+
+        std::vector<std::string> args;
+        args.push_back(Config::ProcessPlaceholders(step.args));
+
+        int code = ExecuteProgram(step.prog, args);
+    
+        if (code != 0)
+        {
+            spdlog::error("Sketch: Upload failed (step #{0})", i + 1);
+            return code;
+        }
+
+        i++;
     }
 
     return 0;

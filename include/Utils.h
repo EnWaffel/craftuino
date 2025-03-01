@@ -18,3 +18,4 @@ std::string VarTypeToStr(VarType type);
 VarType EstimateVarTypeByValue(const std::string& value);
 std::string ToLowercase(const std::string& str);
 Var* GetVarByName(Program* prog, Func* func, const std::string& name);
+std::string ReplaceString(std::string str, const std::string& from, const std::string& to);

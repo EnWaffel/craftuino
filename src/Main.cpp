@@ -11,6 +11,7 @@ int main(int argc, char *argv[])
     args.add_argument("-s").help("Path to the sketch folder").required().nargs(1);
     args.add_argument("-v").help("Show verbose output").default_value(false).nargs(0);
     args.add_argument("-g").help("Only generate C++ code").default_value(false).nargs(0);
+    args.add_argument("--chip").help("Automatically uses the config file for the specified chip (Example: --chip uno -> configs/config.ini.win.uno)").default_value("").nargs(1);
   
     try {
       args.parse_args(argc, argv);
@@ -23,15 +24,24 @@ int main(int argc, char *argv[])
   
     Config::verbose = args.is_used("-v");
 
+    std::string configSuffix = "";
+#ifdef _WIN32
+    configSuffix = "win";
+#endif
+#ifdef __linux__
+    configSuffix = "linux";
+#endif
+
     std::string configPath = args.get("-c");
     if (configPath == "config.ini.<os>")
     {
-#ifdef _WIN32
-    configPath = "config.ini.win";
-#endif
-#ifdef __linux__
-    configPath = "config.ini.linux";
-#endif
+        configPath = "config.ini." + configSuffix;
+    }
+
+    std::string chipName = args.get("--chip");
+    if (!chipName.empty())
+    {
+        configPath = "config.ini." + configSuffix + "." + chipName;
     }
 
     int result;

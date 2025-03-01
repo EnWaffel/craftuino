@@ -2,5 +2,6 @@ build
 .vscode
 depend
 testsketch
+testsketch2
 arduino-cli
 test
