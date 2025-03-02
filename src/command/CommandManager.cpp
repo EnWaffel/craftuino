@@ -90,10 +90,9 @@ int CommandManager::CompileLine(Program& prog, const std::string& line, int line
     }
 
     Command* cmd = commands.at(cmdName);
-    cmd->SetProgramAndFunc(&prog, &prog.funcs.at(func));
 
     std::pair<int, Cmd> result;
-    if ((result = cmd->Compile(realSplit)).first != 0)
+    if ((result = cmd->Compile(prog, prog.funcs.at(func), realSplit)).first != 0)
     {
         spdlog::error("Compiler: [{0}:1] Compilation terminated: Compile error", lineNum, cmdName);
         return result.first;
@@ -131,7 +130,7 @@ int CommandManager::CompileLine(Program& prog, const std::string& line, int line
     return 0;
 }
 
-void CommandManager::GenerateCommand(Program& prog, Cmd& cmd, std::ofstream& out)
+void CommandManager::GenerateCommand(Program& prog, Func& func, Cmd& cmd, std::ofstream& out)
 {
     if (commands.count(cmd.name) < 1)
     {
@@ -139,5 +138,5 @@ void CommandManager::GenerateCommand(Program& prog, Cmd& cmd, std::ofstream& out
         return;
     }
 
-    commands.at(cmd.name)->Generate(prog, cmd, out);
+    commands.at(cmd.name)->Generate(prog, func, cmd, out);
 }

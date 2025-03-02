@@ -1,0 +1,3 @@
+LIBRARY ext-arduino
+EXPORTS
+    extension_main

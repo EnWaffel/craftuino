@@ -1,8 +1,8 @@
 #include "Sketch.h"
 #include "Logger.h"
-#include "command/Commands.h"
 #include "Generator.h"
 #include "Config.h"
+#include "extension/Extension.h"
 
 #include <fstream>
 #include <filesystem>
@@ -18,20 +18,10 @@ bool replace(std::string& str, const std::string& from, const std::string& to) {
 }
 
 Sketch* Sketch::CUR_SKETCH = nullptr;
+ExtensionAPIImpl Sketch::API;
 
 Sketch::Sketch()
 {
-    cmdMgr.AddCommand("delay", new DelayCmd);
-    cmdMgr.AddCommand("pinmode", new PinModeCmd);
-    cmdMgr.AddCommand("setpin", new SetPinCmd);
-    cmdMgr.AddCommand("function", new FunctionCmd);
-    cmdMgr.AddCommand("var", new VarCmd);
-    cmdMgr.AddCommand("gvar", new GVarCmd);
-    cmdMgr.AddCommand("set", new SetCmd);
-    cmdMgr.AddCommand("execute", new ExecuteCmd);
-    cmdMgr.AddCommand("getpin", new GetPinCmd);
-    cmdMgr.AddCommand("serial", new SerialCmd);
-
     CUR_SKETCH = this;
 }
 
@@ -54,6 +44,12 @@ int Sketch::DoDir(const std::string folderPath)
 #ifdef _WIN32
 	sketchName = fs::path(sketchFolder).filename().string();
 #endif
+
+    if (!Extension::LoadAll())
+    {
+        spdlog::error("Sketch: Failed to load extensions");
+        return 1;
+    }
 
     Config::sketchName = sketchName;
 
@@ -82,7 +78,6 @@ int Sketch::DoDir(const std::string folderPath)
 #ifdef _WIN32
         fileName = v.path().filename().string();
 #endif
-        //if (fileName.find("setup.cino") != std::string::npos || fileName.find("loop.cino") != std::string::npos) continue;
 
         if (EndsWith(fileName, ".cino"))
         {

@@ -118,7 +118,7 @@ int Generator::GenFunc(Program& prog, Func& func, const std::string& name)
 
     for (Cmd& cmd : func.cmds)
     {
-        cmdMgr->GenerateCommand(prog, cmd, out);
+        cmdMgr->GenerateCommand(prog, func, cmd, out);
         LN;
     }
 
